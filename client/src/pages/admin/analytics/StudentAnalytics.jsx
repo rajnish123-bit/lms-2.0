@@ -291,10 +291,13 @@ const StudentAnalytics = () => {
         <CardContent>
           <div className="space-y-4 max-h-96 overflow-y-auto">
             {filteredStudents.map((studentData) => (
-              <div key={studentData.student._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                <div className="flex items-center gap-3">
+              <div 
+                key={studentData.student._id} 
                 className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                 onClick={() => navigate(`/admin/analytics/student/${studentData.student._id}`)}
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
                     <AvatarImage src={studentData.student.photoUrl || "https://github.com/shadcn.png"} />
                     <AvatarFallback>{studentData.student.name?.charAt(0) || "U"}</AvatarFallback>
                   </Avatar>

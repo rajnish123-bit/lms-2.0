@@ -19,7 +19,9 @@ import {
   Bar,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  AreaChart,
+  Area
 } from "recharts";
 import {
   ArrowLeft,
@@ -34,7 +36,11 @@ import {
   User,
   Mail,
   Phone,
-  MapPin
+  MapPin,
+  Eye,
+  Video,
+  FileText,
+  Target
 } from "lucide-react";
 
 const StudentDetail = () => {
@@ -79,6 +85,20 @@ const StudentDetail = () => {
   // Calculate overall progress percentage
   const overallProgress = stats.totalCourses > 0 ? 
     ((stats.completedCourses + (stats.inProgressCourses * 0.5)) / stats.totalCourses) * 100 : 0;
+
+  // Prepare detailed course progress data
+  const detailedCourseProgress = purchasedCourses.map(courseData => {
+    const progress = progressData.find(p => p.courseId._id === courseData.course._id);
+    const progressPercentage = progress ? 
+      (progress.lectureProgress.filter(lp => lp.viewed).length / progress.lectureProgress.length) * 100 : 0;
+    
+    return {
+      ...courseData,
+      progress,
+      progressPercentage,
+      status: progress?.completed ? 'Completed' : progressPercentage > 0 ? 'In Progress' : 'Not Started'
+    };
+  });
 
   return (
     <div className="space-y-6 p-6">
@@ -149,7 +169,7 @@ const StudentDetail = () => {
       <Tabs defaultValue="courses" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="courses">Courses</TabsTrigger>
-          <TabsTrigger value="progress">Progress</TabsTrigger>
+          <TabsTrigger value="progress">Detailed Progress</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>
@@ -221,7 +241,7 @@ const StudentDetail = () => {
             </Card>
           </div>
 
-          {/* Purchased Courses List */}
+          {/* Purchased Courses List with Enhanced Details */}
           <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
               <CardTitle className="text-xl font-semibold text-gray-700 flex items-center">
@@ -231,40 +251,66 @@ const StudentDetail = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {purchasedCourses.map((courseData) => {
-                  const progress = progressData.find(p => p.courseId._id === courseData.course._id);
-                  const progressPercentage = progress ? 
-                    (progress.lectureProgress.filter(lp => lp.viewed).length / progress.lectureProgress.length) * 100 : 0;
+                {detailedCourseProgress.map((courseData) => {
+                  const { course, progress, progressPercentage, status } = courseData;
                   
                   return (
                     <div 
-                      key={courseData.course._id} 
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                      onClick={() => setSelectedCourse(courseData)}
+                      key={course._id} 
+                      className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
                     >
-                      <div className="flex items-center gap-4">
-                        <img 
-                          src={courseData.course.courseThumbnail} 
-                          alt={courseData.course.courseTitle}
-                          className="w-16 h-16 rounded-lg object-cover"
-                        />
-                        <div>
-                          <h4 className="font-medium text-lg">{courseData.course.courseTitle}</h4>
-                          <p className="text-sm text-gray-500">
-                            Purchased on {new Date(courseData.purchaseDate).toLocaleDateString()}
-                          </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Progress value={progressPercentage} className="w-32" />
-                            <span className="text-sm font-medium">{progressPercentage.toFixed(1)}%</span>
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-4">
+                          <img 
+                            src={course.courseThumbnail} 
+                            alt={course.courseTitle}
+                            className="w-20 h-20 rounded-lg object-cover"
+                          />
+                          <div>
+                            <h4 className="font-medium text-lg">{course.courseTitle}</h4>
+                            <p className="text-sm text-gray-500">
+                              Purchased on {new Date(courseData.purchaseDate).toLocaleDateString()}
+                            </p>
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant={status === 'Completed' ? "default" : status === 'In Progress' ? "secondary" : "outline"}>
+                                {status}
+                              </Badge>
+                              <span className="text-sm text-gray-500">₹{courseData.amount}</span>
+                            </div>
                           </div>
                         </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-blue-600">{progressPercentage.toFixed(1)}%</div>
+                          <Progress value={progressPercentage} className="w-32 mt-2" />
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-green-600">₹{courseData.amount}</div>
-                        <Badge variant={progress?.completed ? "default" : "secondary"}>
-                          {progress?.completed ? "Completed" : "In Progress"}
-                        </Badge>
-                      </div>
+
+                      {/* Lecture Progress Details */}
+                      {progress && (
+                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                          <h5 className="font-medium mb-3 flex items-center">
+                            <Video className="h-4 w-4 mr-2" />
+                            Lecture Progress ({progress.lectureProgress.filter(lp => lp.viewed).length}/{progress.lectureProgress.length})
+                          </h5>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {progress.lectureProgress.map((lectureProgress, index) => (
+                              <div key={lectureProgress.lectureId} className="flex items-center gap-2 p-2 bg-white rounded">
+                                {lectureProgress.viewed ? (
+                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                ) : (
+                                  <PlayCircle className="h-4 w-4 text-gray-400" />
+                                )}
+                                <span className="text-sm">Lecture {index + 1}</span>
+                                {lectureProgress.viewed && (
+                                  <Badge variant="outline" className="ml-auto text-xs">
+                                    ✓
+                                  </Badge>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -273,7 +319,7 @@ const StudentDetail = () => {
           </Card>
         </TabsContent>
 
-        {/* Progress Tab */}
+        {/* Detailed Progress Tab */}
         <TabsContent value="progress" className="space-y-6">
           {selectedCourse ? (
             <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
@@ -337,41 +383,89 @@ const StudentDetail = () => {
               </CardContent>
             </Card>
           ) : (
-            <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold text-gray-700">Course Progress Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {progressData.map((progress) => {
-                    const course = purchasedCourses.find(pc => pc.course._id === progress.courseId._id)?.course;
-                    if (!course) return null;
+            <div className="space-y-6">
+              {/* Course Progress Overview */}
+              <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <CardHeader>
+                  <CardTitle className="text-xl font-semibold text-gray-700">Detailed Course Progress Overview</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {detailedCourseProgress.map((courseData) => {
+                      const { course, progress, progressPercentage, status } = courseData;
+                      
+                      return (
+                        <div key={course._id} className="border rounded-lg p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-4">
+                              <img 
+                                src={course.courseThumbnail} 
+                                alt={course.courseTitle}
+                                className="w-16 h-16 rounded-lg object-cover"
+                              />
+                              <div>
+                                <h4 className="font-medium text-lg">{course.courseTitle}</h4>
+                                <p className="text-sm text-gray-500">₹{courseData.amount}</p>
+                              </div>
+                            </div>
+                            <Badge variant={status === 'Completed' ? "default" : status === 'In Progress' ? "secondary" : "outline"}>
+                              {status}
+                            </Badge>
+                          </div>
 
-                    const completedLectures = progress.lectureProgress.filter(lp => lp.viewed).length;
-                    const totalLectures = progress.lectureProgress.length;
-                    const progressPercentage = (completedLectures / totalLectures) * 100;
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Overall Progress</span>
+                              <span className="text-sm font-bold">{progressPercentage.toFixed(1)}%</span>
+                            </div>
+                            <Progress value={progressPercentage} className="w-full" />
 
-                    return (
-                      <div key={progress.courseId._id} className="p-4 bg-gray-50 rounded-lg">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-medium">{course.courseTitle}</h4>
-                          <Badge variant={progress.completed ? "default" : "secondary"}>
-                            {progress.completed ? "Completed" : "In Progress"}
-                          </Badge>
+                            {progress && (
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                                <div className="text-center p-3 bg-blue-50 rounded-lg">
+                                  <div className="text-lg font-bold text-blue-600">
+                                    {progress.lectureProgress.length}
+                                  </div>
+                                  <div className="text-xs text-gray-600">Total Lectures</div>
+                                </div>
+                                <div className="text-center p-3 bg-green-50 rounded-lg">
+                                  <div className="text-lg font-bold text-green-600">
+                                    {progress.lectureProgress.filter(lp => lp.viewed).length}
+                                  </div>
+                                  <div className="text-xs text-gray-600">Completed</div>
+                                </div>
+                                <div className="text-center p-3 bg-orange-50 rounded-lg">
+                                  <div className="text-lg font-bold text-orange-600">
+                                    {progress.lectureProgress.filter(lp => !lp.viewed).length}
+                                  </div>
+                                  <div className="text-xs text-gray-600">Remaining</div>
+                                </div>
+                                <div className="text-center p-3 bg-purple-50 rounded-lg">
+                                  <div className="text-lg font-bold text-purple-600">
+                                    {progress.completed ? '100%' : progressPercentage.toFixed(0) + '%'}
+                                  </div>
+                                  <div className="text-xs text-gray-600">Completion</div>
+                                </div>
+                              </div>
+                            )}
+
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => setSelectedCourse(courseData)}
+                              className="mt-4"
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Detailed Progress
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <Progress value={progressPercentage} className="flex-1" />
-                          <span className="text-sm font-medium">{progressPercentage.toFixed(1)}%</span>
-                          <span className="text-sm text-gray-500">
-                            {completedLectures}/{totalLectures} lectures
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </TabsContent>
 
@@ -388,21 +482,22 @@ const StudentDetail = () => {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={completionTrends}>
+                  <AreaChart data={completionTrends}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                     <XAxis dataKey="date" stroke="#6b7280" />
                     <YAxis stroke="#6b7280" />
                     <Tooltip 
-                      formatter={(value) => [`${value}%`, 'Progress']}
+                      formatter={(value) => [`${value.toFixed(1)}%`, 'Progress']}
                     />
-                    <Line 
+                    <Area 
                       type="monotone" 
                       dataKey="progress" 
                       stroke="#3b82f6" 
-                      strokeWidth={3}
-                      dot={{ stroke: '#3b82f6', strokeWidth: 2, r: 4 }}
+                      fill="#3b82f6"
+                      fillOpacity={0.3}
+                      strokeWidth={2}
                     />
-                  </LineChart>
+                  </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
@@ -410,31 +505,61 @@ const StudentDetail = () => {
             {/* Course Performance */}
             <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
               <CardHeader>
-                <CardTitle className="text-xl font-semibold text-gray-700">Course Performance</CardTitle>
+                <CardTitle className="text-xl font-semibold text-gray-700">Course Performance Comparison</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={purchasedCourses.map(pc => {
-                    const progress = progressData.find(p => p.courseId._id === pc.course._id);
-                    const progressPercentage = progress ? 
-                      (progress.lectureProgress.filter(lp => lp.viewed).length / progress.lectureProgress.length) * 100 : 0;
-                    
-                    return {
-                      course: pc.course.courseTitle.substring(0, 15) + '...',
-                      progress: progressPercentage,
-                      amount: pc.amount
-                    };
-                  })}>
+                  <BarChart data={detailedCourseProgress.map(cp => ({
+                    course: cp.course.courseTitle.substring(0, 15) + '...',
+                    progress: cp.progressPercentage,
+                    amount: cp.amount
+                  }))}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                     <XAxis dataKey="course" stroke="#6b7280" />
                     <YAxis stroke="#6b7280" />
-                    <Tooltip />
-                    <Bar dataKey="progress" fill="#10b981" name="Progress %" />
+                    <Tooltip 
+                      formatter={(value, name) => [
+                        name === 'progress' ? `${value.toFixed(1)}%` : `₹${value}`,
+                        name === 'progress' ? 'Progress' : 'Amount Paid'
+                      ]}
+                    />
+                    <Bar dataKey="progress" fill="#10b981" name="progress" />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
           </div>
+
+          {/* Performance Metrics */}
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold text-gray-700">Performance Metrics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+                  <Target className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-blue-600">{stats.averageProgress.toFixed(1)}%</div>
+                  <div className="text-sm text-gray-600">Average Progress</div>
+                </div>
+                <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
+                  <Award className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-green-600">{stats.completedCourses}</div>
+                  <div className="text-sm text-gray-600">Courses Completed</div>
+                </div>
+                <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
+                  <Clock className="h-8 w-8 text-orange-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-orange-600">{Math.round(stats.totalWatchTime / 60)}</div>
+                  <div className="text-sm text-gray-600">Hours Watched</div>
+                </div>
+                <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
+                  <DollarSign className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-purple-600">₹{stats.totalSpent.toLocaleString()}</div>
+                  <div className="text-sm text-gray-600">Total Investment</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Activity Tab */}
@@ -447,10 +572,10 @@ const StudentDetail = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-96 overflow-y-auto">
                 {activityTimeline.map((activity, index) => (
-                  <div key={index} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="flex-shrink-0">
+                  <div key={index} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex-shrink-0 mt-1">
                       {activity.type === 'course_purchased' && <DollarSign className="h-5 w-5 text-green-500" />}
                       {activity.type === 'lecture_completed' && <CheckCircle2 className="h-5 w-5 text-blue-500" />}
                       {activity.type === 'course_completed' && <Award className="h-5 w-5 text-purple-500" />}
@@ -458,6 +583,9 @@ const StudentDetail = () => {
                     <div className="flex-1">
                       <p className="font-medium">{activity.description}</p>
                       <p className="text-sm text-gray-500">{new Date(activity.timestamp).toLocaleString()}</p>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {new Date(activity.timestamp).toLocaleDateString()}
                     </div>
                   </div>
                 ))}
