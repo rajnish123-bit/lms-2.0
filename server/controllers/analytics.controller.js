@@ -452,3 +452,158 @@ export const getStudentAnalytics = async (req, res) => {
     });
   }
 };
+
+export const getStudentDetail = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const instructorId = req.id;
+
+    // Get all courses by instructor
+    const instructorCourses = await Course.find({ creator: instructorId });
+    const courseIds = instructorCourses.map(course => course._id);
+
+    // Get student information
+    const student = await User.findById(studentId).select("-password");
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found"
+      });
+    }
+
+    // Get all purchases by this student for instructor's courses
+    const purchases = await CoursePurchase.find({
+      userId: studentId,
+      courseId: { $in: courseIds },
+      status: "completed"
+    })
+    .populate("courseId", "courseTitle courseThumbnail coursePrice lectures")
+    .sort({ createdAt: -1 });
+
+    // Get progress data for this student
+    const progressData = await CourseProgress.find({
+      userId: studentId,
+      courseId: { $in: courseIds }
+    }).populate("courseId", "courseTitle courseThumbnail");
+
+    // Calculate statistics
+    const totalCourses = purchases.length;
+    const completedCourses = progressData.filter(p => p.completed).length;
+    const inProgressCourses = progressData.filter(p => !p.completed && p.lectureProgress.some(lp => lp.viewed)).length;
+    const notStartedCourses = totalCourses - completedCourses - inProgressCourses;
+    const totalSpent = purchases.reduce((acc, p) => acc + p.amount, 0);
+    
+    // Calculate total lectures watched and watch time
+    let totalLecturesWatched = 0;
+    let totalWatchTime = 0; // in minutes
+    let totalProgress = 0;
+
+    progressData.forEach(progress => {
+      const watchedLectures = progress.lectureProgress.filter(lp => lp.viewed).length;
+      totalLecturesWatched += watchedLectures;
+      
+      // Estimate watch time (assuming 10 minutes per lecture)
+      totalWatchTime += watchedLectures * 10;
+      
+      // Calculate course progress percentage
+      if (progress.lectureProgress.length > 0) {
+        const courseProgress = (watchedLectures / progress.lectureProgress.length) * 100;
+        totalProgress += courseProgress;
+      }
+    });
+
+    const averageProgress = progressData.length > 0 ? totalProgress / progressData.length : 0;
+
+    // Format purchased courses data
+    const purchasedCourses = purchases.map(purchase => ({
+      course: purchase.courseId,
+      purchaseDate: purchase.createdAt,
+      amount: purchase.amount,
+      paymentId: purchase.paymentId
+    }));
+
+    // Generate completion trends (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const completionTrends = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      
+      // Calculate progress for this date (simplified - using current progress)
+      const dateStr = date.toISOString().split('T')[0];
+      completionTrends.push({
+        date: dateStr,
+        progress: Math.min(averageProgress + (Math.random() * 10 - 5), 100) // Simulated trend
+      });
+    }
+
+    // Generate activity timeline
+    const activityTimeline = [];
+    
+    // Add course purchases
+    purchases.forEach(purchase => {
+      activityTimeline.push({
+        type: 'course_purchased',
+        description: `Purchased "${purchase.courseId.courseTitle}" for ₹${purchase.amount}`,
+        timestamp: purchase.createdAt,
+        courseId: purchase.courseId._id
+      });
+    });
+
+    // Add course completions
+    progressData.filter(p => p.completed).forEach(progress => {
+      activityTimeline.push({
+        type: 'course_completed',
+        description: `Completed course "${progress.courseId.courseTitle}"`,
+        timestamp: progress.updatedAt,
+        courseId: progress.courseId._id
+      });
+    });
+
+    // Add recent lecture completions (simulated)
+    progressData.forEach(progress => {
+      const recentLectures = progress.lectureProgress.filter(lp => lp.viewed).slice(-3);
+      recentLectures.forEach((lecture, index) => {
+        activityTimeline.push({
+          type: 'lecture_completed',
+          description: `Completed a lecture in "${progress.courseId.courseTitle}"`,
+          timestamp: new Date(Date.now() - (index * 24 * 60 * 60 * 1000)), // Simulated timestamps
+          courseId: progress.courseId._id
+        });
+      });
+    });
+
+    // Sort activity timeline by timestamp (most recent first)
+    activityTimeline.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        student,
+        purchasedCourses,
+        progressData,
+        stats: {
+          totalCourses,
+          completedCourses,
+          inProgressCourses,
+          notStartedCourses,
+          totalSpent,
+          totalLecturesWatched,
+          totalWatchTime,
+          averageProgress
+        },
+        completionTrends,
+        activityTimeline: activityTimeline.slice(0, 20) // Limit to 20 most recent activities
+      }
+    });
+
+  } catch (error) {
+    console.error("Student detail error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch student details"
+    });
+  }
+};

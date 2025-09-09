@@ -3,7 +3,8 @@ import isAuthenticated from "../middlewares/isAuthenticated.js";
 import { 
   getDashboardAnalytics, 
   getCourseAnalytics, 
-  getStudentAnalytics 
+  getStudentAnalytics,
+  getStudentDetail
 } from "../controllers/analytics.controller.js";
 
 const router = express.Router();
@@ -16,5 +17,8 @@ router.route("/course/:courseId").get(isAuthenticated, getCourseAnalytics);
 
 // Student analytics
 router.route("/students").get(isAuthenticated, getStudentAnalytics);
+
+// Individual student detail
+router.route("/student/:studentId").get(isAuthenticated, getStudentDetail);
 
 export default router;
