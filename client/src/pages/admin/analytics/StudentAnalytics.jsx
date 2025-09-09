@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { useGetStudentAnalyticsQuery } from "@/features/api/analyticsApi";
+import { useNavigate } from "react-router-dom";
 import {
   LineChart,
   Line,
@@ -32,6 +33,7 @@ import {
 
 const StudentAnalytics = () => {
   const { data, isLoading, isError } = useGetStudentAnalyticsQuery();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("totalSpent");
 
@@ -291,7 +293,8 @@ const StudentAnalytics = () => {
             {filteredStudents.map((studentData) => (
               <div key={studentData.student._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                onClick={() => navigate(`/admin/analytics/student/${studentData.student._id}`)}
                     <AvatarImage src={studentData.student.photoUrl || "https://github.com/shadcn.png"} />
                     <AvatarFallback>{studentData.student.name?.charAt(0) || "U"}</AvatarFallback>
                   </Avatar>

@@ -19,6 +19,7 @@ import CourseProgress from "./pages/student/CourseProgress";
 import SearchPage from "./pages/student/SearchPage";
 import CourseAnalytics from "./pages/admin/analytics/CourseAnalytics";
 import StudentAnalytics from "./pages/admin/analytics/StudentAnalytics";
+import StudentDetail from "./pages/admin/analytics/StudentDetail";
 import {
   AdminRoute,
   AuthenticatedUser,
@@ -133,6 +134,10 @@ const appRouter = createBrowserRouter([
           {
             path: "analytics/students",
             element: <StudentAnalytics />,
+          },
+          {
+            path: "analytics/student/:studentId",
+            element: <StudentDetail />,
           },
         ],
       },

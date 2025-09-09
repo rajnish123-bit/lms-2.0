@@ -32,10 +32,18 @@ export const analyticsApi = createApi({
       providesTags: ["Analytics"],
     }),
   }),
+  getStudentDetail: builder.query({
+    query: (studentId) => ({
+      url: `/student/${studentId}`,
+      method: "GET",
+    }),
+    providesTags: ["Analytics"],
+  }),
 });
 
 export const {
   useGetDashboardAnalyticsQuery,
   useGetCourseAnalyticsQuery,
   useGetStudentAnalyticsQuery,
+  useGetStudentDetailQuery,
 } = analyticsApi;
